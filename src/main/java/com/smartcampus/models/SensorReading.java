@@ -18,10 +18,22 @@ public class SensorReading {
 
     public SensorReading() {}
     // Getters/Setters
-    public String getId() { return id; }
-    public void setId(String id) { this.id = id; }
-    public long getTimestamp() { return timestamp; }
-    public void setTimestamp(long t) { this.timestamp = t; }
-    public double getValue() { return value; }
-    public void setValue(double v) { this.value = v; }
+    public String getId() { 
+        return id; 
+    }
+    public void setId(String id) { 
+        this.id = id; 
+    }
+    public long getTimestamp() { 
+        return timestamp; 
+    }
+    public void setTimestamp(long t) { 
+        this.timestamp = t; 
+    }
+    public double getValue() { 
+        return value; 
+    }
+    public void setValue(double v) { 
+        this.value = v; 
+    }
 }

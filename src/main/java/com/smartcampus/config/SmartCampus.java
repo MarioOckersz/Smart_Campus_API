@@ -20,16 +20,19 @@ public class SmartCampus extends Application {
     @Override
     public Set<Class<?>> getClasses() {
         Set<Class<?>> classes = new HashSet<>();
+        
         // Resources
         classes.add(com.smartcampus.resources.DiscoveryResource.class);
         classes.add(com.smartcampus.resources.RoomResource.class);
         classes.add(com.smartcampus.resources.SensorResource.class);
-        // Providers
+        
+        // Providers (Mappers & Filters)
         classes.add(com.smartcampus.providers.RoomNotEmptyExceptionMapper.class);
         classes.add(com.smartcampus.providers.LinkedResourceNotFoundMapper.class);
         classes.add(com.smartcampus.providers.SensorUnavailableExceptionMapper.class);
         classes.add(com.smartcampus.providers.GlobalExceptionMapper.class);
         classes.add(com.smartcampus.providers.ApiLoggingFilter.class);
+        
         return classes;
     }
 }

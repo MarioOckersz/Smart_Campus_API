@@ -9,6 +9,9 @@ package com.smartcampus.resources;
  * @author mario
  */
 
+
+
+
 import com.smartcampus.data.DataStore;
 import com.smartcampus.exceptions.LinkedResourceNotFoundException;
 import com.smartcampus.models.Sensor;
@@ -26,17 +29,23 @@ public class SensorResource {
 
     @GET
     public Response getSensors(@QueryParam("type") String type) {
-        List<Sensor> result = store.getSensors().values().stream()
+        List<Sensor> sensors = store.getSensors().values().stream()
             .filter(s -> type == null || s.getType().equalsIgnoreCase(type))
             .collect(Collectors.toList());
-        return Response.ok(result).build();
+        return Response.ok(sensors).build();
     }
 
     @POST
     public Response createSensor(Sensor sensor, @Context UriInfo uriInfo) {
         if (!store.getRooms().containsKey(sensor.getRoomId())) {
-            throw new LinkedResourceNotFoundException("Room ID " + sensor.getRoomId() + " not found.");
+            throw new LinkedResourceNotFoundException("Room ID " + sensor.getRoomId() + " does not exist.");
         }
+        
+        
+        if (sensor.getId() == null || sensor.getId().isEmpty()) {
+            sensor.setId(java.util.UUID.randomUUID().toString());
+        }
+        
         store.getSensors().put(sensor.getId(), sensor);
         store.getRooms().get(sensor.getRoomId()).getSensorIds().add(sensor.getId());
 
@@ -44,9 +53,8 @@ public class SensorResource {
         return Response.created(uri).entity(sensor).build();
     }
 
-    // Sub-Resource Locator: Note NO HTTP Method (@GET/@POST) here
     @Path("/{sensorId}/readings")
-    public SensorReadingResource getReadings(@PathParam("sensorId") String sensorId) {
+    public SensorReadingResource getReadingsResource(@PathParam("sensorId") String sensorId) {
         return new SensorReadingResource(sensorId);
     }
 }
