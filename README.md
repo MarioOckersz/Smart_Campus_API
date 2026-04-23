@@ -1,144 +1,112 @@
 # Smart Campus IoT Gateway 
 
 **A General Computer Systems (GCS) Infrastructure Project**
-This is a lightweight, high-performance RESTful API designed to manage IoT sensor networks across a university campus. It handles the registration, live telemetry, and lifecycle of physical rooms and hardware endpoints.
+This is a lightweight RESTful API I built to handle the IoT sensor network for a university campus. It manages rooms, links sensors to those rooms, and tracks every single data reading in a historical log.
 
 ---
 
 ## 🏗️ System Architecture & Stack
 
-This gateway is designed to run as a standalone service, avoiding the need for heavy external application servers. It uses a thread-safe, in-memory architecture for fast data processing.
+I designed this to be a standalone service. You don't need to install Tomcat or GlassFish separately because it uses an embedded server.
 
 * **Language:** Java 17
 * **Framework:** JAX-RS (Jersey)
 * **Server:** Embedded Grizzly HTTP Server
-* **Serialization:** Eclipse Yasson (JSON-B)
 * **Build System:** Apache Maven
-* **Persistence:** In-Memory Concurrent Collections (`ConcurrentHashMap`)
+* **Persistence:** In-memory `ConcurrentHashMap` (Thread-safe)
 
 ---
 
-## ⚙️ Core System Rules & Logic
+## ⚙️ Project Logic & "Part" Requirements
 
-The API follows strict business logic to ensure data integrity:
+### Part 1: Service Architecture & Setup
+The API starts at `/api/v1` as required. I used a custom `Application` subclass with the `@ApplicationPath` annotation to handle the versioning.
 
-1. **Relational Integrity:** Sensors must be linked to a valid `roomId`. If the room doesn't exist, the system returns a `422 Unprocessable Entity` error.
-2. **Real-time Sync:** When you post a new reading, the system automatically updates the parent sensor's `currentValue` immediately.
-3. **Maintenance Mode:** If a sensor is marked as `MAINTENANCE`, it will block all incoming data readings and return a `403 Forbidden` error.
-4. **Safety Deletions:** You cannot delete a room if it still has sensors inside it. You must remove the sensors first (returns `409 Conflict`).
-5. **Secure IDs:** If you don't provide an ID when creating a room or sensor, the server generates a secure UUID for you.
+**Q: JAX-RS Lifecycle & Data Sync**
+By default, JAX-RS resources are **request-scoped**. This means every time someone hits an endpoint, the server makes a brand new instance of the class and then throws it away. Because of this, you can't just store data in a regular `List` inside the resource class—it would disappear instantly. That’s why I used a **Singleton DataStore**. It stays alive for the whole lifecycle of the app, and I used `ConcurrentHashMap` so that if two people post a reading at the same time, the data doesn't get corrupted or lost.
 
----
-
-## 📡 Endpoint Reference
-
-**Base URL:** `http://localhost:8080/api/v1`
-
-| Method | Endpoint | Description |
-| :--- | :--- | :--- |
-| `GET` | `/` | System discovery and HATEOAS links |
-| `GET` | `/rooms` | Get all registered rooms |
-| `POST` | `/rooms` | Register a new room |
-| `GET` | `/sensors` | Get sensors (Supports `?type=` filter) |
-| `POST` | `/sensors` | Register and link a new sensor |
-| `GET` | `/sensors/{id}/readings` | Get telemetry history for a sensor |
-| `POST` | `/sensors/{id}/readings` | Push a new data reading to a sensor |
-| `DELETE` | `/rooms/{id}` | Remove an empty room |
+**Q: Why use Hypermedia (HATEOAS)?**
+The discovery endpoint at the root (`/api/v1`) gives the client links to everything else. This is way better than static docs because if I ever change a URL, the client doesn't break—it just follows the new link. It makes the API "self-discoverable."
 
 ---
 
-## 🛠️ How to Build and Run
+### Part 2: Room Management
+I implemented the `/rooms` path to handle all the lecture halls and labs.
 
-### Prerequisites
-You need **Java 17+**, **Maven**, and **Git** installed on your system.
+**Q: Returning IDs vs. Full Objects**
+If I only return IDs, the response is tiny and saves bandwidth, but the client has to make a separate request for every single room to see the names. Returning full objects is "heavy" on the network, but it’s much easier for the dev building the frontend because they get everything in one shot. I went with full objects for the prototype because our data is small.
 
-### 1. Clone the Code
+**Q: Is DELETE idempotent?**
+Yes. In my code, if you delete room `101`, it’s gone (204 No Content). If you send the exact same request again, the server just says "Not Found" (404). Even though the status code changes, the *state* of the server is the same: the room is still gone. That’s idempotency.
+
+---
+
+### Part 3: Sensor Operations
+The `/sensors` endpoint handles the hardware. It checks if a room exists before adding a sensor to it.
+
+**Q: What if the client sends XML instead of JSON?**
+Since I used `@Consumes(MediaType.APPLICATION_JSON)`, if a client tries to send XML or plain text, JAX-RS will automatically block it and return a **415 Unsupported Media Type**. The code won't even try to run, which protects the backend from processing garbage data.
+
+**Q: Why use @QueryParam for filtering?**
+I used query params for the sensor "type" (e.g., `?type=CO2`) because filtering is an optional action on a collection. If I put it in the path (like `/sensors/type/CO2`), it implies that "CO2" is a permanent resource location. Query parameters are the "standard" way to do searches and filters in REST.
+
+---
+
+### Part 4: Sub-Resources & Nesting
+To handle the thousands of readings each sensor gets, I used the **Sub-Resource Locator** pattern.
+
+**Q: Benefits of Sub-Resource Locators**
+Instead of having one massive, 1000-line `SensorResource` class that handles everything, I delegated the readings logic to a separate `SensorReadingResource` class. It makes the code way easier to read and maintain. It also makes sure that you can't even get to the readings unless you have a valid sensor ID first.
+
+---
+
+### Part 5: Error Handling & Security
+The API is "leak-proof." I used `ExceptionMappers` for everything.
+
+**Q: 422 vs 404 for missing references**
+If the JSON you sent is perfect but the `roomId` inside it doesn't exist, a **422 Unprocessable Entity** is much more accurate. A 404 usually means the URL is wrong; a 422 tells the dev "I understood your request, but the data you gave me doesn't work with my logic."
+
+**Q: Security risks of Stack Traces**
+Exposing a Java stack trace is a massive gift to hackers. It tells them exactly what libraries I’m using (like Jersey or Yasson), my internal file paths, and even my class names. They can use that to find specific vulnerabilities (CVEs) for those versions. That’s why my "Global Safety Net" mapper turns every crash into a boring 500 error.
+
+**Q: Why use Filters for logging?**
+If I put `Logger.info()` in every method, I’d be repeating myself 20 times. By using a `ContainerRequestFilter`, I write the logging code **once**, and it automatically catches every single request that hits the server. It’s cleaner and I’m less likely to forget to log an endpoint.
+
+---
+
+## 🛠️ Build and Launch
+
+**1. Clone and Enter**
 ```bash
 git clone [https://github.com/MarioOckersz/Smart_Campus_API.git](https://github.com/MarioOckersz/Smart_Campus_API.git)
 cd Smart_Campus_API
 ```
 
-### 2. Compile and Build
+**2. Build**
 ```bash
 mvn clean compile -U
 ```
 
-### 3. Run the Server
+**3. Run**
 ```bash
 mvn exec:java
 ```
-*(The API will be live at http://localhost:8080/api/v1/)*
 
 ---
 
-## 🧪 CLI Integration Tests (cURL)
+## 🧪 Sample Tests (cURL)
 
-You can test the system by running these commands in a separate terminal while the server is running.
-
-### 1. Check API Status
+**Check API Discovery:**
 ```bash
 curl -X GET http://localhost:8080/api/v1/
 ```
 
-### 2. Create a New Room
+**Create a Room:**
 ```bash
-curl -X POST http://localhost:8080/api/v1/rooms \
-  -H "Content-Type: application/json" \
-  -d '{"name": "Networking Lab", "capacity": 45}'
+curl -X POST http://localhost:8080/api/v1/rooms -H "Content-Type: application/json" -d '{"name": "Main Lab", "capacity": 50}'
 ```
 
-### 3. List All Rooms
+**Trigger 409 Conflict (Delete room with sensors):**
 ```bash
-curl -X GET http://localhost:8080/api/v1/rooms
+curl -i -X DELETE http://localhost:8080/api/v1/rooms/ID_WITH_SENSORS_HERE
 ```
-
-### 4. Create a Sensor
-*(Replace `INSERT_ROOM_ID` with an actual ID from the step above)*
-```bash
-curl -X POST http://localhost:8080/api/v1/sensors \
-  -H "Content-Type: application/json" \
-  -d '{"type": "CO2", "status": "ACTIVE", "roomId": "INSERT_ROOM_ID"}'
-```
-
-### 5. Push a New Data Reading
-*(Replace `INSERT_SENSOR_ID` with an actual Sensor ID)*
-```bash
-curl -X POST http://localhost:8080/api/v1/sensors/INSERT_SENSOR_ID/readings \
-  -H "Content-Type: application/json" \
-  -d '{"value": 420.5}'
-```
-
-### 6. Get Sensor History
-```bash
-curl -X GET http://localhost:8080/api/v1/sensors/INSERT_SENSOR_ID/readings
-```
-
-### 7. Delete a Room
-```bash
-curl -X DELETE http://localhost:8080/api/v1/rooms/INSERT_ROOM_ID
-```
-
----
-
-## 🛡️ Error Handling & Observability
-
-### Exception Shielding
-The system uses custom `ExceptionMapper` classes to catch internal errors and return clean JSON instead of raw code crashes:
-* **403 Forbidden:** Sensor is in maintenance.
-* **404 Not Found:** Resource doesn't exist.
-* **409 Conflict:** Cannot delete a room with active sensors.
-* **422 Unprocessable Entity:** Invalid Room ID provided.
-* **500 Server Error:** General internal failure.
-
-### Traffic Logging
-An `ApiLoggingFilter` tracks every request. It logs the HTTP method, the URI, and the final status code to the server console so you can monitor traffic in real-time.
-
----
-
-## 📐 Architectural Trade-offs
-
-### Eager vs. Lazy Loading
-Currently, when you request a `Sensor`, it returns the entire historical `readings` list inside the object. 
-
-* **The Benefit:** This prevents the "N+1" problem. A developer can get the sensor status and the history in one single request, which is much faster for small systems. 
-* **The Trade-off:** As the history grows to thousands of rows, the payload size will increase. In a real-world production version, I would change this to "Lazy Loading," where history is only sent if specifically requested via the `/readings` endpoint to save bandwidth.
