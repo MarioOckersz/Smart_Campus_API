@@ -157,7 +157,6 @@ An `ApiLoggingFilter` implementing `ContainerRequestFilter` and `ContainerRespon
 
 ## 🏗️ Architecture (Class Diagram)
 
-```mermaid
 classDiagram
     direction TB
 
@@ -277,5 +276,7 @@ classDiagram
     Room "1" -- "*" Sensor : contains
     Sensor "1" -- "*" SensorReading : owns history
 
-    }
-```
+    %% Exception mapping relationships
+    RoomResource ..> RoomNotEmptyExceptionMapper : throws
+    SensorResource ..> LinkedResourceNotFoundMapper : throws
+    SensorReadingResource ..> SensorUnavailableExceptionMapper : throws
