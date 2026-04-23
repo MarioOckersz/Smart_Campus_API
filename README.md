@@ -1,90 +1,153 @@
 # Smart_Campus_API
 Developing a JAX-RS RESTful based API service for campus sensor systems
-# Smart Campus API
+# Smart Campus REST API
 
-This is a RESTful API built to manage IoT sensors and rooms across a university campus. It handles creating rooms, registering sensors, and logging sensor data over time. 
+## Overview
 
-## API Design Overview
+This project is a RESTful web service built using Java 17 and JAX-RS (Jersey). It simulates a Smart Campus IoT infrastructure system that tracks and manages:
+* Rooms
+* Sensors
+* Sensor Readings
 
-This project is built using Java 17, Jakarta REST (Jersey), and runs on an embedded Grizzly server. 
+The API operates on a standalone, embedded Grizzly HTTP server. It utilizes a thread-safe, in-memory `DataStore` (using `ConcurrentHashMap`) and adheres strictly to core REST principles:
+* Resource-based architecture
+* Standard HTTP methods (GET, POST, DELETE)
+* Sub-resource locator routing (Sensor -> Readings)
+* Query parameter filtering
+* Centralized exception mappers preventing stack-trace leaks
+* JSON-B request/response serialization
 
-Here is a quick breakdown of how the backend is structured:
-* **Data Storage:** Instead of a real database, I used a Singleton `DataStore` with `ConcurrentHashMap`. This acts as an in-memory database that stays thread-safe when multiple requests hit the server at the same time.
-* **Sub-Resource Locators:** I used sub-resources for the sensor readings (e.g., `/sensors/{id}/readings`). This is important for state synchronization. Whenever a new reading is POSTed to the history list, the sub-resource automatically updates the parent sensor's `currentValue`. 
-* **Error Handling:** I implemented custom Exception Mappers. If someone tries to delete a room that still has sensors, or looks for an ID that doesn't exist, the server catches the Java exception and returns a clean JSON error response (like a 404 or 409) rather than crashing or printing a raw stack trace to the client.
+## Technology Stack
 
-### API Design Trade-off: Embedded Objects vs. Lazy Loading
-Right now, when you send a GET request for a Sensor object, it automatically includes the full `history` list of every reading inside the JSON response. 
+* Java 17
+* JAX-RS (Jersey)
+* Embedded Grizzly HTTP Server
+* Maven
+* Eclipse Yasson (JSON-B)
+* In-memory Thread-Safe DataStore (No external database)
 
-The advantage of this eager-loading approach is that it solves the "N+1 request" problem. A frontend developer can get the sensor's current status and its entire historical graph in just one single HTTP request. 
+## Base URL
 
-The trade-off, however, is payload bloat. If a sensor records data every minute for a year, that JSON object will become massive and slow down the network. For this coursework prototype, embedding the objects made sense to easily demonstrate the data linking. But if this were deployed in a real-world campus, I would switch to lazy loading. I would return just the core sensor data and provide a HATEOAS link to fetch the history separately.
+http://localhost:8080/api/v1
 
----
+## API Design Summary
 
-## How to Build and Run
+### Resource Paths
 
-### What you need:
-You will need **Java 17** (or higher), **Git**, and **Maven** installed on your computer. 
-* **Mac:** You can install Maven and Git quickly via terminal using `brew install maven git`.
-* **Windows:** Download Maven and Git from their official sites and make sure their `bin` folders are added to your system's PATH variables.
+* `/` = API discovery and HATEOAS links
+* `/rooms` = Manage campus rooms
+* `/sensors` = Manage hardware sensors
+* `/sensors/{id}/readings` = Manage historical sensor readings (Sub-resource)
 
-### Steps to launch:
+### Relationships
 
-**1. Clone the code and enter the directory:**
+* A Room can house multiple Sensors.
+* A Sensor belongs to exactly one Room.
+* A Sensor contains a historical list of multiple Readings.
 
-    git clone https://github.com/YOUR_USERNAME/smart-campus-api.git
-    cd smart-campus-api
+### Design Trade-off (Embedded Objects vs. Reference Links)
+In the current implementation, calling a `Sensor` object eagerly returns the full embedded `history` list of `SensorReading` objects to eliminate the "N+1" request problem for front-end dashboards. In a production-scale environment, a lazy-loading approach utilizing HATEOAS reference links would be implemented to prevent payload bloat.
 
-**2. Download dependencies and compile:**
-Run this command to force Maven to download the required Jakarta and Jersey libraries and compile the code.
+## Build & Run Instructions
+
+### 1. Prerequisites
+
+Make sure you have installed:
+* Java JDK 17 or higher
+* Maven 3.8+
+* Git
+
+### 2. Clone Repository
+
+    git clone https://github.com/MarioOckersz/Smart_Campus_API.git
+    cd Smart_Campus_API
+
+### 3. Build the Project
+
+This will clean the build directory and force Maven to resolve all Jakarta and Jersey dependencies.
 
     mvn clean compile -U
 
-**3. Start the server:**
+### 4. Deploy the Application
+
+Because this API uses an embedded Grizzly server, you do not need to configure Tomcat or GlassFish. Simply run:
 
     mvn exec:java
 
-If everything worked, your terminal will say `Smart Campus API running at: http://localhost:8080/api/v1/`. To kill the server, just press Enter or `Ctrl + C`.
+### 5. Verify Server
 
----
+Open your browser or Postman and navigate to: http://localhost:8080/api/v1/
+You should see the API discovery JSON response.
 
-## Testing the API (cURL Commands)
+## Sample cURL Commands
 
-Here are five sample interactions you can run in a separate terminal to test the API while the server is running.
-
-**1. View API Discovery Links**
-Gets the base navigation links.
+**1. API Discovery**
 
     curl -X GET http://localhost:8080/api/v1/
 
-**2. Create a Room**
-Adds a new room to the database. (Copy the ID it returns for the next steps).
+**2. Get All Rooms**
+
+    curl -X GET http://localhost:8080/api/v1/rooms
+
+**3. Create a Room**
 
     curl -X POST http://localhost:8080/api/v1/rooms \
-      -H "Content-Type: application/json" \
-      -d '{ "name": "Main Server Room", "capacity": 5 }'
+    -H "Content-Type: application/json" \
+    -d '{
+      "name": "Networking Lab",
+      "capacity": 45
+    }'
 
-**3. Add a Sensor**
-Registers a new sensor. Replace `<room-id>` with the ID you got from step 2.
+**4. Create a Sensor**
 
     curl -X POST http://localhost:8080/api/v1/sensors \
-      -H "Content-Type: application/json" \
-      -d '{ "roomId": "<room-id>", "type": "Temperature", "status": "ACTIVE" }'
+    -H "Content-Type: application/json" \
+    -d '{
+      "type": "CO2",
+      "status": "ACTIVE",
+      "roomId": "REPLACE_WITH_ROOM_ID"
+    }'
 
-**4. Log a Sensor Reading**
-Adds a new data point to a sensor. Replace `<sensor-id>` with the ID from step 3.
+**5. Get Sensors (with filter)**
 
-    curl -X POST http://localhost:8080/api/v1/sensors/<sensor-id>/readings \
-      -H "Content-Type: application/json" \
-      -d '{ "value": 24.5 }'
+    curl -X GET "http://localhost:8080/api/v1/sensors?type=CO2"
 
-**5. Filter Sensors**
-Finds all sensors in the system that match a specific type.
+**6. Get Sensor Readings**
 
-    curl -X GET "http://localhost:8080/api/v1/sensors?type=Temperature"
+    curl -X GET http://localhost:8080/api/v1/sensors/REPLACE_WITH_SENSOR_ID/readings
 
-**6. Test Error Handling (Bonus)**
-Try to delete the room you created. The server will reject it with a 409 Conflict because the room still has an active sensor inside it.
+**7. Add Sensor Reading**
 
-    curl -i -X DELETE http://localhost:8080/api/v1/rooms/<room-id>
+    curl -X POST http://localhost:8080/api/v1/sensors/REPLACE_WITH_SENSOR_ID/readings \
+    -H "Content-Type: application/json" \
+    -d '{
+      "value": 420.5
+    }'
+
+**8. Delete a Room**
+
+    curl -X DELETE http://localhost:8080/api/v1/rooms/REPLACE_WITH_ROOM_ID
+
+## Business Rules
+
+* A room cannot be deleted if it contains active sensors (Returns 409 Conflict).
+* A newly created sensor must be linked to a valid, existing room ID (Returns 422 Unprocessable Entity).
+* Sensors with a status of `MAINTENANCE` cannot accept new readings (Returns 403 Forbidden).
+* Adding a reading via the sub-resource automatically updates the parent sensor's `currentValue` in memory to ensure state synchronization.
+* If a POST request lacks an ID, the server automatically generates a secure UUID.
+
+## Exception Handling
+
+Custom exception mappers intercept errors and return structured JSON responses, preventing internal stack trace leaks to the client:
+
+* **403 Forbidden:** `SensorUnavailableExceptionMapper` (e.g., Sensor is in maintenance).
+* **404 Not Found:** Standard JAX-RS missing resource.
+* **409 Conflict:** `RoomNotEmptyExceptionMapper` (Attempted to delete a room containing sensors).
+* **422 Unprocessable Entity:** `LinkedResourceNotFoundMapper` (Invalid linked Room ID).
+* **500 Internal Server Error:** `GlobalExceptionMapper` (Catch-all for unhandled server exceptions).
+
+## Logging
+
+An `ApiLoggingFilter` implementing `ContainerRequestFilter` and `ContainerResponseFilter` utilizes `java.util.logging` to securely record:
+* Incoming requests (HTTP Method + URI)
+* Outgoing responses (Final Status Code)
