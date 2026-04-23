@@ -23,83 +23,69 @@ In the current implementation, calling a `Sensor` object eagerly returns the ful
 ## 🚀 Build and Launch Instructions
 
 ### Prerequisites
-* **Java Development Kit (JDK):** Version 17 or higher
-* **Apache Maven:** Version 3.8+ 
+You must have **Java 17** (or higher), **Apache Maven**, and **Git** installed on your machine.
+* **For Mac users:** Open your terminal and install Maven and Git using Homebrew: `brew install maven git`
+* **For Windows users:** Download Maven and Git from their official websites, install/extract them, and ensure their `bin` folders are added to your Windows System Environment Variables (`PATH`).
 
 ### Step-by-Step Setup
 
-**1. Open your terminal and navigate to the project root directory:**
-```bash
-cd path/to/smart-campus-api
-```
+**1. Clone the repository and navigate into the folder:**
 
-**2. Clean the project and download dependencies:**
-This forces Maven to resolve all Jakarta and Jersey dependencies.
-```bash
-mvn clean compile -U
-```
+    git clone https://github.com/YOUR_USERNAME/smart-campus-api.git
+    cd smart-campus-api
+
+**2. Clean the project and force-download dependencies:**
+This ensures Maven resolves all Jakarta, Jersey, and Yasson dependencies correctly from the internet.
+
+    mvn clean compile -U
 
 **3. Launch the Grizzly Server:**
-```bash
-mvn exec:java
-```
+
+    mvn exec:java
 
 **4. Verify the Server:**
-Once the terminal displays `Smart Campus API running at: http://localhost:8080/api/v1/`, the API is ready to accept HTTP requests.
+Wait a few seconds. Once the terminal displays `Smart Campus API running at: http://localhost:8080/api/v1/`, the API is successfully running and ready to accept HTTP requests. 
+
+*(Note: To stop the server at any time, press `Enter` in the terminal or `Ctrl + C`.)*
 
 ---
 
 ## 🧪 Sample API Interactions (cURL)
 
-The following commands demonstrate successful interactions with the core endpoints of the API.
+The following commands demonstrate successful interactions with the core endpoints of the API. You can run these in a separate terminal window while the server is running.
 
 ### 1. API Discovery & HATEOAS Links
 Retrieves the root API information and available navigation links.
-```bash
-curl -X GET http://localhost:8080/api/v1/
-```
+
+    curl -X GET http://localhost:8080/api/v1/
 
 ### 2. Create a Room
 Creates a new physical room in the system. Note the returned `id` for the next steps.
-```bash
-curl -X POST http://localhost:8080/api/v1/rooms \
-  -H "Content-Type: application/json" \
-  -d '{
-        "name": "Main Server Room",
-        "capacity": 5
-      }'
-```
+
+    curl -X POST http://localhost:8080/api/v1/rooms \
+      -H "Content-Type: application/json" \
+      -d '{ "name": "Main Server Room", "capacity": 5 }'
 
 ### 3. Register a Sensor to a Room
 Creates a new sensor and links it to the room. *(Replace `<room-id>` with the ID generated in Step 2).*
-```bash
-curl -X POST http://localhost:8080/api/v1/sensors \
-  -H "Content-Type: application/json" \
-  -d '{
-        "roomId": "<room-id>",
-        "type": "Temperature",
-        "status": "ACTIVE"
-      }'
-```
+
+    curl -X POST http://localhost:8080/api/v1/sensors \
+      -H "Content-Type: application/json" \
+      -d '{ "roomId": "<room-id>", "type": "Temperature", "status": "ACTIVE" }'
 
 ### 4. Record a Sensor Reading (Sub-Resource)
 Logs a new data point to the sensor's history and updates its current value. *(Replace `<sensor-id>` with the ID generated in Step 3).*
-```bash
-curl -X POST http://localhost:8080/api/v1/sensors/<sensor-id>/readings \
-  -H "Content-Type: application/json" \
-  -d '{
-        "value": 24.5
-      }'
-```
+
+    curl -X POST http://localhost:8080/api/v1/sensors/<sensor-id>/readings \
+      -H "Content-Type: application/json" \
+      -d '{ "value": 24.5 }'
 
 ### 5. Filter Sensors via Query Parameters
 Retrieves a list of all sensors filtered strictly by their operational type.
-```bash
-curl -X GET "http://localhost:8080/api/v1/sensors?type=Temperature"
-```
 
-### 6. Trigger Business Logic Protection
+    curl -X GET "http://localhost:8080/api/v1/sensors?type=Temperature"
+
+### 6. Trigger Business Logic Protection (Bonus)
 Demonstrates the custom 409 Conflict Mapper. The system will safely reject this request because you cannot delete a room that currently houses active sensors. *(Replace `<room-id>` with the ID generated in Step 2).*
-```bash
-curl -i -X DELETE http://localhost:8080/api/v1/rooms/<room-id>
-```
+
+    curl -i -X DELETE http://localhost:8080/api/v1/rooms/<room-id>
