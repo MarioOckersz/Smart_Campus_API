@@ -32,6 +32,12 @@
             <artifactId>jersey-media-json-binding</artifactId>
             <version>${jersey.version}</version>
         </dependency>
+        <dependency>
+            <groupId>org.eclipse</groupId>
+            <artifactId>yasson</artifactId>
+            <version>3.0.4</version>
+        </dependency>
+        
     </dependencies>
 
     <build>
