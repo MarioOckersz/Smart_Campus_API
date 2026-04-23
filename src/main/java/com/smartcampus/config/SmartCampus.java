@@ -16,7 +16,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 @ApplicationPath("/api/v1")
-public class SmartCampusApp extends Application {
+public class SmartCampus extends Application {
     @Override
     public Set<Class<?>> getClasses() {
         Set<Class<?>> classes = new HashSet<>();
