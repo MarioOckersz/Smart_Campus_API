@@ -1,120 +1,115 @@
 # Smart Campus IoT Gateway 
 
-A lightweight, high-performance RESTful API engineered to manage interconnected campus environments. This backend service handles the registration, telemetry, and lifecycle management of physical rooms and hardware sensors.
+**A General Computer Systems (GCS) Infrastructure Project** This is a lightweight, high-performance RESTful API designed to manage IoT sensor networks across a campus. It handles the registration, live telemetry, and lifecycle of physical rooms and hardware endpoints.
 
 ---
 
-## 🏗️ System Architecture & Stack
+## System Architecture & Stack
 
-This gateway is designed to run completely standalone, bypassing the need for heavy application servers like Tomcat. It uses a thread-safe, volatile memory architecture for rapid state management.
+This gateway is built to run as a standalone service, avoiding the need for heavy external application servers. It uses a thread-safe, in-memory architecture for fast data processing.
 
-**Core Stack:**
 * **Language:** Java 17
 * **Framework:** JAX-RS (Jersey)
-* **Server:** Embedded Grizzly HTTP HTTP Server
+* **Server:** Embedded Grizzly HTTP Server
 * **Serialization:** Eclipse Yasson (JSON-B)
 * **Build System:** Apache Maven
-* **Persistence Layer:** In-Memory Concurrent Collections (ConcurrentHashMap)
+* **Persistence:** In-Memory Concurrent Collections
 
 ---
 
-## ⚙️ Core System Capabilities & Constraints
+## Core System Rules & Logic
 
-The API enforces strict data integrity rules at the application layer:
-* **Relational Integrity:** Sensors cannot be orphaned; they must be initialized with a valid roomId (triggers 422 Unprocessable Entity if invalid).
-* **State Synchronization:** Submitting a reading via the sub-resource automatically updates the parent sensor’s currentValue property in real-time.
-* **Hardware Lifecycle:** Sensors flagged as MAINTENANCE are locked and will reject incoming telemetry (triggers 403 Forbidden).
-* **Deletion Safeguards:** Physical rooms containing active hardware endpoints cannot be purged from the system (triggers 409 Conflict).
-* **Automated UUIDs:** Payloads submitted without explicit IDs will have secure UUIDs generated server-side.
+The API follows strict business logic to ensure data integrity:
+1. **Relational Integrity:** Sensors must be linked to a valid roomId. If the room doesn't exist, the system returns a 422 error.
+2. **Real-time Sync:** When you post a new reading, the system automatically updates the parent sensor's "currentValue" immediately.
+3. **Maintenance Mode:** If a sensor is marked as MAINTENANCE, it will block all incoming data readings and return a 403 error.
+4. **Safety Deletions:** You cannot delete a room if it still has sensors inside it. You must remove the sensors first (returns 409 Conflict).
+5. **Secure IDs:** If you don't provide an ID when creating a room or sensor, the server generates a secure UUID for you.
 
 ---
 
-## 📡 Endpoint Reference
+## API Endpoint Reference
 
-Base URI: http://localhost:8080/api/v1
+**Base URL:** http://localhost:8080/api/v1
 
-| HTTP Method | Endpoint | Description |
+| Method | Endpoint | Description |
 | :--- | :--- | :--- |
-| GET | / | System discovery and HATEOAS navigation links. |
-| GET | /rooms | Retrieve a collection of all campus rooms. |
-| POST | /rooms | Provision a new physical room. |
-| GET | /sensors | Retrieve sensors (Supports ?type= query filtering). |
-| POST | /sensors | Provision and link a new hardware sensor. |
-| GET | /sensors/{id}/readings | [Sub-resource] Fetch telemetry history for a specific sensor. |
-| POST | /sensors/{id}/readings | [Sub-resource] Push a new telemetry data point to a sensor. |
-| DELETE | /rooms/{id} | Decommission a room (must be empty). |
+| GET | / | System discovery and HATEOAS links |
+| GET | /rooms | Get all registered rooms |
+| POST | /rooms | Register a new room |
+| GET | /sensors | Get sensors (Supports ?type= filter) |
+| POST | /sensors | Register and link a new sensor |
+| GET | /sensors/{id}/readings | Get telemetry history for a sensor |
+| POST | /sensors/{id}/readings | Push a new data reading to a sensor |
+| DELETE | /rooms/{id} | Remove an empty room |
 
 ---
 
-## 🛠️ Deployment & Execution
+## How to Build and Run
 
-Prerequisites: Java 17+, Maven 3.8+, Git.
+**Prerequisites:** You need Java 17+, Maven, and Git.
 
-**1. Pull the Source Code**
-    git clone https://github.com/MarioOckersz/Smart_Campus_API.git
-    cd Smart_Campus_API
+**1. Clone the Code**
+git clone https://github.com/MarioOckersz/Smart_Campus_API.git
+cd Smart_Campus_API
 
-**2. Resolve Dependencies & Compile**
-    mvn clean compile -U
+**2. Compile and Build**
+mvn clean compile -U
 
-**3. Boot the Gateway**
-No external container configuration is required.
-    mvn exec:java
+**3. Run the Server**
+mvn exec:java
 
-(The service will bind to port 8080. Access http://localhost:8080/api/v1/ to verify the heartbeat.)
-
----
-
-## 💻 CLI Integration Tests (cURL)
-
-Use the following commands to validate the routing and business logic.
-
-1. Check System Heartbeat & Links
-    curl -X GET http://localhost:8080/api/v1/
-
-2. Provision a Room
-    curl -X POST http://localhost:8080/api/v1/rooms -H "Content-Type: application/json" -d '{"name": "Networking Lab", "capacity": 45}'
-
-3. Retrieve Room Roster
-    curl -X GET http://localhost:8080/api/v1/rooms
-
-4. Provision a Sensor (Replace ID dynamically)
-    curl -X POST http://localhost:8080/api/v1/sensors -H "Content-Type: application/json" -d '{"type": "CO2", "status": "ACTIVE", "roomId": "INSERT_ROOM_ID"}'
-
-5. Push Telemetry Data
-    curl -X POST http://localhost:8080/api/v1/sensors/INSERT_SENSOR_ID/readings -H "Content-Type: application/json" -d '{"value": 420.5}'
-
-6. Fetch Sensor History
-    curl -X GET http://localhost:8080/api/v1/sensors/INSERT_SENSOR_ID/readings
-
-7. Query Sensors by Filter
-    curl -X GET "http://localhost:8080/api/v1/sensors?type=CO2"
-
-8. Attempt Room Decommission
-    curl -X DELETE http://localhost:8080/api/v1/rooms/INSERT_ROOM_ID
+(The API will be live at http://localhost:8080/api/v1/)
 
 ---
 
-## 🛡️ Observability & Error Mapping
+## CLI Integration Tests (cURL)
+
+You can test the system by running these commands in your terminal.
+
+**1. Check API Status**
+curl -X GET http://localhost:8080/api/v1/
+
+**2. Create a New Room**
+curl -X POST http://localhost:8080/api/v1/rooms -H "Content-Type: application/json" -d '{"name": "Networking Lab", "capacity": 45}'
+
+**3. List All Rooms**
+curl -X GET http://localhost:8080/api/v1/rooms
+
+**4. Create a Sensor (Replace INSERT_ROOM_ID with an actual ID)**
+curl -X POST http://localhost:8080/api/v1/sensors -H "Content-Type: application/json" -d '{"type": "CO2", "status": "ACTIVE", "roomId": "INSERT_ROOM_ID"}'
+
+**5. Push a New Data Reading (Replace INSERT_SENSOR_ID)**
+curl -X POST http://localhost:8080/api/v1/sensors/INSERT_SENSOR_ID/readings -H "Content-Type: application/json" -d '{"value": 420.5}'
+
+**6. Get Sensor History**
+curl -X GET http://localhost:8080/api/v1/sensors/INSERT_SENSOR_ID/readings
+
+**7. Delete a Room**
+curl -X DELETE http://localhost:8080/api/v1/rooms/INSERT_ROOM_ID
+
+---
+
+## Error Handling & Observability
 
 ### Exception Shielding
-To prevent framework stack traces from leaking to the consumer, the system intercepts internal failures using custom JAX-RS ExceptionMapper classes:
-* SensorUnavailableExceptionMapper -> 403 Forbidden
-* Standard JAX-RS -> 404 Not Found
-* RoomNotEmptyExceptionMapper -> 409 Conflict
-* LinkedResourceNotFoundMapper -> 422 Unprocessable Entity
-* GlobalExceptionMapper -> 500 Internal Server Error
+The system uses custom Exception Mappers to catch internal errors and return clean JSON instead of raw code crashes:
+* **403 Forbidden:** Sensor is in maintenance.
+* **404 Not Found:** Resource doesn't exist.
+* **409 Conflict:** Cannot delete a room with active sensors.
+* **422 Unprocessable Entity:** Invalid Room ID provided.
+* **500 Server Error:** General internal failure.
 
 ### Traffic Logging
-All network traffic is captured via a ContainerRequestFilter and ContainerResponseFilter, utilizing java.util.logging to record HTTP methods, target URIs, and final resolution status codes for auditing purposes.
+We use an ApiLoggingFilter to track every request. It logs the HTTP method, the URI, and the final status code to the server console so you can monitor traffic in real-time.
 
 ---
 
-## 📐 Architectural Decisions & Trade-offs
+## Architectural Trade-offs
 
-### Eager vs. Lazy Loading of Sensor History
-Currently, requesting a Sensor object eagerly serializes and returns its entire embedded history array of SensorReading objects. 
+### Eager vs. Lazy Loading
+Currently, when you request a Sensor, it returns the entire historical "readings" list inside the object. 
 
-**Rationale:** This decision was made to circumvent the "N+1" network request problem, allowing consumer dashboards to render a sensor's current operational state alongside its historical trendline in a single HTTP transaction. 
+**Why I did this:** It stops the "N+1" problem. A developer can get the sensor status and the history in one single request, which is much faster for small systems. 
 
-**Future Scaling:** As telemetry data accumulates in a production deployment, this eager-loading strategy will result in severe payload bloat. For subsequent iterations, the architecture will transition to a lazy-loading model, omitting the embedded array and instead providing a HATEOAS navigational link to the /readings sub-resource to conserve bandwidth.
+**The Downside:** As the history grows to thousands of rows, the file size will get too big. In a real-world version, I would change this to "Lazy Loading," where the history is only sent if the user specifically asks for the `/readings` endpoint.
