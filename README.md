@@ -32,7 +32,7 @@ You must have **Java 17** (or higher), **Apache Maven**, and **Git** installed o
 **1. Clone the repository and navigate into the folder:**
 
     git clone https://github.com/MarioOckersz/Smart_Campus_API.git
-    cd smart-campus-api
+    cd Smart_Campus_API
 
 **2. Clean the project and force-download dependencies:**
 This ensures Maven resolves all Jakarta, Jersey, and Yasson dependencies correctly from the internet.
