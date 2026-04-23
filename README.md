@@ -151,3 +151,131 @@ Custom exception mappers intercept errors and return structured JSON responses, 
 An `ApiLoggingFilter` implementing `ContainerRequestFilter` and `ContainerResponseFilter` utilizes `java.util.logging` to securely record:
 * Incoming requests (HTTP Method + URI)
 * Outgoing responses (Final Status Code)
+
+
+---
+
+## 🏗️ Architecture (Class Diagram)
+
+```mermaid
+classDiagram
+    direction TB
+
+    %% 1.1 Setup
+    class SmartCampusApp {
+        <<Application>>
+        @ApplicationPath("/api/v1")
+        +getClasses() Set
+    }
+
+    class DataStore {
+        <<Singleton>>
+        +ConcurrentHashMap~String, Room~ rooms
+        +ConcurrentHashMap~String, Sensor~ sensors
+    }
+
+    %% Models
+    class Room {
+        +String id
+        +String name
+        +int capacity
+        +List~String~ sensorIds
+    }
+
+    class Sensor {
+        +String id
+        +String roomId
+        +String type
+        +String status
+        +double currentValue
+        +List~SensorReading~ history
+    }
+
+    class SensorReading {
+        +String id
+        +long timestamp
+        +double value
+    }
+
+    %% Resources
+    class DiscoveryResource {
+        <<JAX-RS Resource>>
+        +getDiscovery() Response
+    }
+    note for DiscoveryResource "1.2 Discovery: Returns HATEOAS links\nand version metadata"
+
+    class RoomResource {
+        <<JAX-RS Resource>>
+        +getRooms() Response
+        +createRoom(Room) Response
+        +getRoomById(String) Response
+        +deleteRoom(String) Response
+    }
+    note for RoomResource "2.2 Deletion: 409 Conflict logic\nblocks deletion if sensors present"
+
+    class SensorResource {
+        <<JAX-RS Resource>>
+        +getSensors(@QueryParam type) Response
+        +createSensor(Sensor) Response
+        +getReadingsResource(String) SensorReadingResource
+    }
+    note for SensorResource "3.1 Integrity: Validates roomId existence\n3.2 Filtering: Dynamic search by type"
+
+    class SensorReadingResource {
+        <<Sub-Resource Locator>>
+        -String sensorId
+        +getHistory() Response
+        +addReading(SensorReading) Response
+    }
+    note for SensorReadingResource "4.2 History: Side-effect updates\nparent Sensor.currentValue"
+
+    %% 5.1 Specific Exception Mappers
+    class RoomNotEmptyExceptionMapper {
+        <<Provider>>
+        +toResponse(RoomNotEmptyException) Response
+    }
+    note for RoomNotEmptyExceptionMapper "5.1 Maps to 409 Conflict"
+
+    class LinkedResourceNotFoundMapper {
+        <<Provider>>
+        +toResponse(LinkedResourceNotFoundException) Response
+    }
+    note for LinkedResourceNotFoundMapper "5.1 Maps to 422 Unprocessable"
+
+    class SensorUnavailableExceptionMapper {
+        <<Provider>>
+        +toResponse(SensorUnavailableException) Response
+    }
+    note for SensorUnavailableExceptionMapper "5.1 Maps to 403 Forbidden"
+
+    %% 5.2 Global Mapper
+    class GlobalExceptionMapper {
+        <<Provider>>
+        +toResponse(Throwable) Response
+    }
+    note for GlobalExceptionMapper "5.2 Safety Net: Returns 500\n(Leak-Proof, no stack trace)"
+
+    %% 5.3 Logging
+    class ApiLoggingFilter {
+        <<Provider>>
+        <<ContainerRequestFilter>>
+        <<ContainerResponseFilter>>
+        +filter(ContainerRequestContext) void
+        +filter(ContainerRequestContext, ContainerResponseContext) void
+    }
+
+    %% Relationships
+    SmartCampusApp ..> DiscoveryResource : registers
+    SmartCampusApp ..> RoomResource : registers
+    SmartCampusApp ..> SensorResource : registers
+
+    RoomResource ..> DataStore : reads/writes
+    SensorResource ..> DataStore : reads/writes
+    SensorReadingResource ..> DataStore : reads/writes
+
+    SensorResource --> SensorReadingResource : delegates locator
+    Room "1" -- "*" Sensor : contains
+    Sensor "1" -- "*" SensorReading : owns history
+
+    }
+```
