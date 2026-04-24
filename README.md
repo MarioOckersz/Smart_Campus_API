@@ -109,7 +109,7 @@ mvn exec:java
 
 ```mermaid
 classDiagram
-    direction TB
+    direction LR
 
     class SmartCampusApp {
         <<Application>>
