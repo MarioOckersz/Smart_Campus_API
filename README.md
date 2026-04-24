@@ -1,4 +1,4 @@
-<img width="1440" height="468" alt="image" src="https://github.com/user-attachments/assets/1ab0dda9-1cee-4aab-98d7-42abf22d5ded" /># Smart Campus API
+# Smart Campus API
 **Module:** 5COSC022W – Client-Server Architectures | **Weight:** 60%
 
 A fully RESTful web service built with **JAX-RS (Jersey 3.1.1)** and an embedded **Grizzly HTTP server**. It manages Rooms, Sensors, and Sensor Readings for a university "Smart Campus" initiative.
