@@ -105,49 +105,249 @@ mvn exec:java
 
 ---
 
+## Class Diagram
+
+```mermaid
+classDiagram
+    class Room {
+        +String id
+        +String name
+        +int capacity
+        +List~String~ sensorIds
+        +getId() String
+        +getName() String
+        +getCapacity() int
+        +getSensorIds() List
+    }
+
+    class Sensor {
+        +String id
+        +String type
+        +String status
+        +double currentValue
+        +String roomId
+        +List~SensorReading~ history
+        +getId() String
+        +getStatus() String
+        +getCurrentValue() double
+        +setCurrentValue(double)
+    }
+
+    class SensorReading {
+        +String id
+        +long timestamp
+        +double value
+        +getId() String
+        +getValue() double
+        +getTimestamp() long
+    }
+
+    class DataStore {
+        -static DataStore instance
+        -Map~String,Room~ rooms
+        -Map~String,Sensor~ sensors
+        +getInstance() DataStore
+        +getRooms() Map
+        +getSensors() Map
+    }
+
+    class RoomResource {
+        +getAllRooms() Response
+        +getRoomById(id) Response
+        +createRoom(room) Response
+        +deleteRoom(id) Response
+    }
+
+    class SensorResource {
+        +getSensors(type) Response
+        +createSensor(sensor) Response
+        +getReadingsResource(sensorId) SensorReadingResource
+    }
+
+    class SensorReadingResource {
+        -String sensorId
+        +getHistory() Response
+        +addReading(reading) Response
+    }
+
+    class DiscoveryResource {
+        +getDiscovery() Response
+    }
+
+    Room "1" --> "0..*" Sensor : contains via sensorIds
+    Sensor "1" --> "0..*" SensorReading : history
+    DataStore "1" o-- "0..*" Room : stores
+    DataStore "1" o-- "0..*" Sensor : stores
+    RoomResource --> DataStore : uses
+    SensorResource --> DataStore : uses
+    SensorReadingResource --> DataStore : uses
+    SensorResource ..> SensorReadingResource : delegates via sub-resource locator
+```
+
+---
+
 ## Sample curl Commands
 
+### 1. GET – Discovery Endpoint (HATEOAS)
+
 ```bash
-# 1. GET – Discovery (HATEOAS links)
-curl -X GET http://localhost:8080/api/v1 -H "Accept: application/json"
-
-# 2. GET – List all rooms
-curl -X GET http://localhost:8080/api/v1/rooms -H "Accept: application/json"
-
-# 3. POST – Create a room
-curl -X POST http://localhost:8080/api/v1/rooms \
-  -H "Content-Type: application/json" \
-  -d '{"id":"ENG-205","name":"Engineering Lab","capacity":40}'
-
-# 4. DELETE – Room with sensors attached (returns 409 Conflict)
-curl -X DELETE http://localhost:8080/api/v1/rooms/LIB-301
-
-# 5. DELETE – Empty room (returns 204 No Content)
-curl -X DELETE http://localhost:8080/api/v1/rooms/ENG-205
-
-# 6. POST – Sensor with invalid roomId (returns 422)
-curl -X POST http://localhost:8080/api/v1/sensors \
-  -H "Content-Type: application/json" \
-  -d '{"id":"TEMP-999","type":"Temperature","status":"ACTIVE","currentValue":0.0,"roomId":"FAKE-ROOM"}'
-
-# 7. POST – Register sensor successfully
-curl -X POST http://localhost:8080/api/v1/sensors \
-  -H "Content-Type: application/json" \
-  -d '{"id":"TEMP-003","type":"Temperature","status":"ACTIVE","currentValue":21.0,"roomId":"LIB-301"}'
-
-# 8. GET – Filter sensors by type
-curl -X GET "http://localhost:8080/api/v1/sensors?type=CO2" -H "Accept: application/json"
-
-# 9. POST – Reading to a MAINTENANCE sensor (returns 403 Forbidden)
-curl -X POST http://localhost:8080/api/v1/sensors/OCC-001/readings \
-  -H "Content-Type: application/json" \
-  -d '{"value":15.0}'
-
-# 10. POST – Reading to an active sensor (updates currentValue)
-curl -X POST http://localhost:8080/api/v1/sensors/TEMP-001/readings \
-  -H "Content-Type: application/json" \
-  -d '{"value":25.3}'
+curl -X GET \
+  http://localhost:8080/api/v1 \
+  -H "Accept: application/json"
 ```
+
+**Expected:** `200 OK` — JSON with API name, version, admin contact, and `_links` map pointing to `/api/v1/rooms` and `/api/v1/sensors`
+
+---
+
+### 2. GET – List All Rooms
+
+```bash
+curl -X GET \
+  http://localhost:8080/api/v1/rooms \
+  -H "Accept: application/json"
+```
+
+**Expected:** `200 OK` — JSON array of all rooms currently in the system, each with `id`, `name`, `capacity`, and `sensorIds`
+
+---
+
+### 3. POST – Create a New Room
+
+```bash
+curl -X POST \
+  http://localhost:8080/api/v1/rooms \
+  -H "Content-Type: application/json" \
+  -d '{
+    "id": "ENG-205",
+    "name": "Engineering Design Studio",
+    "capacity": 40
+  }'
+```
+
+**Expected:** `201 Created` — response body contains the created room object; check response headers for `Location: /api/v1/rooms/ENG-205`
+
+---
+
+### 4. DELETE – Room WITH Sensors Assigned (Blocked)
+
+```bash
+curl -X DELETE \
+  http://localhost:8080/api/v1/rooms/LIB-301
+```
+
+**Expected:** `409 Conflict` — JSON error body explaining the room still has active sensors and cannot be deleted until they are removed first
+
+---
+
+### 5. DELETE – Successfully Delete an Empty Room
+
+```bash
+curl -X DELETE \
+  http://localhost:8080/api/v1/rooms/ENG-205
+```
+
+**Expected:** `204 No Content` — room has no sensors assigned, deletion succeeds; sending this request a second time returns `404 Not Found` (idempotent behaviour)
+
+---
+
+### 6. POST – Register Sensor with a Non-Existent roomId (Validation Fail)
+
+```bash
+curl -X POST \
+  http://localhost:8080/api/v1/sensors \
+  -H "Content-Type: application/json" \
+  -d '{
+    "id": "TEMP-999",
+    "type": "Temperature",
+    "status": "ACTIVE",
+    "currentValue": 20.0,
+    "roomId": "ROOM-DOES-NOT-EXIST"
+  }'
+```
+
+**Expected:** `422 Unprocessable Entity` — the request body is valid JSON but the `roomId` reference cannot be resolved in the system; `LinkedResourceNotFoundException` is thrown and mapped by `LinkedResourceNotFoundMapper`
+
+---
+
+### 7. POST – Register Sensor Successfully
+
+```bash
+curl -X POST \
+  http://localhost:8080/api/v1/sensors \
+  -H "Content-Type: application/json" \
+  -d '{
+    "id": "TEMP-003",
+    "type": "Temperature",
+    "status": "ACTIVE",
+    "currentValue": 21.0,
+    "roomId": "LIB-301"
+  }'
+```
+
+**Expected:** `201 Created` — sensor is stored in `DataStore`, and `LIB-301`'s `sensorIds` list is updated to include `TEMP-003`; `Location` header points to the new resource
+
+---
+
+### 8. GET – Filter Sensors by Type (Query Parameter)
+
+```bash
+curl -X GET \
+  "http://localhost:8080/api/v1/sensors?type=CO2" \
+  -H "Accept: application/json"
+```
+
+**Expected:** `200 OK` — only sensors whose `type` matches `CO2` (case-insensitive) are returned; all other sensor types are excluded from the response
+
+---
+
+### 9. POST – Add Reading to a MAINTENANCE Sensor (Blocked)
+
+```bash
+curl -X POST \
+  http://localhost:8080/api/v1/sensors/OCC-001/readings \
+  -H "Content-Type: application/json" \
+  -d '{"value": 15.0}'
+```
+
+**Expected:** `403 Forbidden` — `OCC-001` has status `MAINTENANCE`; `SensorUnavailableException` is thrown and mapped to 403, reading is not saved
+
+---
+
+### 10. POST – Add Reading to an Active Sensor
+
+```bash
+curl -X POST \
+  http://localhost:8080/api/v1/sensors/TEMP-001/readings \
+  -H "Content-Type: application/json" \
+  -d '{"value": 25.3}'
+```
+
+**Expected:** `201 Created` — reading is saved with a UUID `id` and epoch `timestamp` auto-generated by the server; the parent sensor's `currentValue` is immediately updated to `25.3`
+
+---
+
+### 11. GET – Verify currentValue Was Updated on Parent Sensor
+
+```bash
+curl -X GET \
+  http://localhost:8080/api/v1/sensors/TEMP-001 \
+  -H "Accept: application/json"
+```
+
+**Expected:** `200 OK` — the `currentValue` field on `TEMP-001` now shows `25.3`, confirming that the POST reading in step 10 triggered the side-effect update on the parent sensor object
+
+---
+
+### 12. GET – Retrieve Full Reading History for a Sensor
+
+```bash
+curl -X GET \
+  http://localhost:8080/api/v1/sensors/TEMP-001/readings \
+  -H "Accept: application/json"
+```
+
+**Expected:** `200 OK` — JSON array of all historical readings for `TEMP-001`, each containing `id` (UUID), `timestamp` (epoch ms), and `value`; the reading from step 10 appears in this list
 
 ---
 
