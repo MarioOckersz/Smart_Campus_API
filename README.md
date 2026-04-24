@@ -1,4 +1,4 @@
-# Smart Campus API
+<img width="1440" height="468" alt="image" src="https://github.com/user-attachments/assets/1ab0dda9-1cee-4aab-98d7-42abf22d5ded" /># Smart Campus API
 **Module:** 5COSC022W – Client-Server Architectures | **Weight:** 60%
 
 A fully RESTful web service built with **JAX-RS (Jersey 3.1.1)** and an embedded **Grizzly HTTP server**. It manages Rooms, Sensors, and Sensor Readings for a university "Smart Campus" initiative.
@@ -109,79 +109,118 @@ mvn exec:java
 
 ```mermaid
 classDiagram
+    direction TB
+
+    class SmartCampusApp {
+        <<Application>>
+        +ApplicationPath /api/v1
+        +getClasses() Set
+    }
+    class DataStore {
+        <<Singleton>>
+        -ConcurrentHashMap rooms
+        -ConcurrentHashMap sensors
+        +getInstance() DataStore
+        +getRooms() Map
+        +getSensors() Map
+    }
     class Room {
         +String id
         +String name
         +int capacity
         +List~String~ sensorIds
         +getId() String
-        +getName() String
-        +getCapacity() int
         +getSensorIds() List
     }
-
     class Sensor {
         +String id
+        +String roomId
         +String type
         +String status
         +double currentValue
-        +String roomId
         +List~SensorReading~ history
-        +getId() String
-        +getStatus() String
-        +getCurrentValue() double
         +setCurrentValue(double)
     }
-
     class SensorReading {
         +String id
         +long timestamp
         +double value
-        +getId() String
-        +getValue() double
-        +getTimestamp() long
     }
-
-    class DataStore {
-        -static DataStore instance
-        -Map~String,Room~ rooms
-        -Map~String,Sensor~ sensors
-        +getInstance() DataStore
-        +getRooms() Map
-        +getSensors() Map
-    }
-
-    class RoomResource {
-        +getAllRooms() Response
-        +getRoomById(id) Response
-        +createRoom(room) Response
-        +deleteRoom(id) Response
-    }
-
-    class SensorResource {
-        +getSensors(type) Response
-        +createSensor(sensor) Response
-        +getReadingsResource(sensorId) SensorReadingResource
-    }
-
-    class SensorReadingResource {
-        -String sensorId
-        +getHistory() Response
-        +addReading(reading) Response
-    }
-
     class DiscoveryResource {
+        <<JAX-RS Resource>>
         +getDiscovery() Response
     }
+    class RoomResource {
+        <<JAX-RS Resource>>
+        +getRooms() Response
+        +createRoom(Room) Response
+        +getRoomById(String) Response
+        +deleteRoom(String) Response
+    }
+    class SensorResource {
+        <<JAX-RS Resource>>
+        +getSensors(type) Response
+        +createSensor(Sensor) Response
+        +getReadingsResource(String) SensorReadingResource
+    }
+    class SensorReadingResource {
+        <<Sub-Resource Locator>>
+        -String sensorId
+        +getHistory() Response
+        +addReading(SensorReading) Response
+    }
+    class RoomNotEmptyExceptionMapper {
+        <<Provider>>
+        +toResponse(ex) Response
+    }
+    class LinkedResourceNotFoundMapper {
+        <<Provider>>
+        +toResponse(ex) Response
+    }
+    class SensorUnavailableExceptionMapper {
+        <<Provider>>
+        +toResponse(ex) Response
+    }
+    class GlobalExceptionMapper {
+        <<Provider>>
+        +toResponse(Throwable) Response
+    }
+    class ApiLoggingFilter {
+        <<Provider>>
+        +filter(req) void
+        +filter(req, res) void
+    }
 
-    Room "1" --> "0..*" Sensor : contains via sensorIds
-    Sensor "1" --> "0..*" SensorReading : history
-    DataStore "1" o-- "0..*" Room : stores
-    DataStore "1" o-- "0..*" Sensor : stores
-    RoomResource --> DataStore : uses
-    SensorResource --> DataStore : uses
-    SensorReadingResource --> DataStore : uses
-    SensorResource ..> SensorReadingResource : delegates via sub-resource locator
+    note for DiscoveryResource "1.2 Returns HATEOAS links and version metadata"
+    note for RoomResource "2.2 Deletion blocked with 409 Conflict if sensors present"
+    note for SensorResource "3.1 Validates roomId exists on POST\n3.2 Filters collection via ?type="
+    note for SensorReadingResource "4.2 Side-effect: updates parent Sensor.currentValue on POST"
+    note for RoomNotEmptyExceptionMapper "5.1 Maps RoomNotEmptyException to 409 Conflict"
+    note for LinkedResourceNotFoundMapper "5.2 Maps LinkedResourceNotFoundException to 422"
+    note for SensorUnavailableExceptionMapper "5.3 Maps SensorUnavailableException to 403 Forbidden"
+    note for GlobalExceptionMapper "5.4 Catch-all safety net: 500 Internal Server Error"
+    note for ApiLoggingFilter "5.5 Logs every request method+URI and response status"
+
+    SmartCampusApp ..> DiscoveryResource : registers
+    SmartCampusApp ..> RoomResource : registers
+    SmartCampusApp ..> SensorResource : registers
+    SmartCampusApp ..> RoomNotEmptyExceptionMapper : registers
+    SmartCampusApp ..> LinkedResourceNotFoundMapper : registers
+    SmartCampusApp ..> SensorUnavailableExceptionMapper : registers
+    SmartCampusApp ..> GlobalExceptionMapper : registers
+    SmartCampusApp ..> ApiLoggingFilter : registers
+
+    RoomResource ..> DataStore : reads/writes
+    SensorResource ..> DataStore : reads/writes
+    SensorReadingResource ..> DataStore : reads/writes
+    SensorResource --> SensorReadingResource : sub-resource locator
+
+    Room "1" --> "0..*" Sensor : contains
+    Sensor "1" --> "0..*" SensorReading : owns history
+
+    RoomResource ..> RoomNotEmptyExceptionMapper : throws
+    SensorResource ..> LinkedResourceNotFoundMapper : throws
+    SensorReadingResource ..> SensorUnavailableExceptionMapper : throws
 ```
 
 ---
