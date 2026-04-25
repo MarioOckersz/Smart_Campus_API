@@ -1,5 +1,6 @@
 # __Smart Campus API System__                    
 **Module:** 5COSC022W – Client-Server Architectures |
+
 **Developed By:** Mario Ockersz | 20240362
 
 A fully RESTful web service built with **JAX-RS (Jersey 3.1.1)** and an embedded **Grizzly HTTP server**. It manages Rooms, Sensors, and Sensor Readings for a university "Smart Campus" initiative.
