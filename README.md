@@ -230,168 +230,110 @@ classDiagram
 ## Sample curl Commands
 
 ### 1. GET – Discovery Endpoint (HATEOAS)
+**Standard version:**
+curl -X GET http://localhost:8080/api/v1 -H "Accept: application/json"
 
-```bash
-curl -X GET \
-  http://localhost:8080/api/v1 \
-  -H "Accept: application/json"
-```
-
-**Expected:** `200 OK` — JSON with API name, version, admin contact, and `_links` map pointing to `/api/v1/rooms` and `/api/v1/sensors`
+**Windows version:**
+curl.exe -X GET http://localhost:8080/api/v1 -H "Accept: application/json"
 
 ---
 
 ### 2. GET – List All Rooms
+**Standard version:**
+curl -X GET http://localhost:8080/api/v1/rooms -H "Accept: application/json"
 
-```bash
-curl -X GET \
-  http://localhost:8080/api/v1/rooms \
-  -H "Accept: application/json"
-```
-
-**Expected:** `200 OK` — JSON array of all rooms currently in the system, each with `id`, `name`, `capacity`, and `sensorIds`
+**Windows version:**
+curl.exe -X GET http://localhost:8080/api/v1/rooms -H "Accept: application/json"
 
 ---
 
 ### 3. POST – Create a New Room
+**Standard version:**
+curl -X POST http://localhost:8080/api/v1/rooms -H "Content-Type: application/json" -d "{\"id\": \"ENG-205\", \"name\": \"Engineering Design Studio\", \"capacity\": 40}"
 
-```bash
-curl -X POST \
-  http://localhost:8080/api/v1/rooms \
-  -H "Content-Type: application/json" \
-  -d '{
-    "id": "ENG-205",
-    "name": "Engineering Design Studio",
-    "capacity": 40
-  }'
-```
-
-**Expected:** `201 Created` — response body contains the created room object; check response headers for `Location: /api/v1/rooms/ENG-205`
+**Windows version:**
+curl.exe -X POST http://localhost:8080/api/v1/rooms -H "Content-Type: application/json" -d "{\"id\": \"ENG-205\", \"name\": \"Engineering Design Studio\", \"capacity\": 40}"
 
 ---
 
 ### 4. DELETE – Room WITH Sensors Assigned (Blocked)
+**Standard version:**
+curl -X DELETE http://localhost:8080/api/v1/rooms/LIB-301
 
-```bash
-curl -X DELETE \
-  http://localhost:8080/api/v1/rooms/LIB-301
-```
-
-**Expected:** `409 Conflict` — JSON error body explaining the room still has active sensors and cannot be deleted until they are removed first
+**Windows version:**
+curl.exe -X DELETE http://localhost:8080/api/v1/rooms/LIB-301
 
 ---
 
 ### 5. DELETE – Successfully Delete an Empty Room
+**Standard version:**
+curl -X DELETE http://localhost:8080/api/v1/rooms/ENG-205
 
-```bash
-curl -X DELETE \
-  http://localhost:8080/api/v1/rooms/ENG-205
-```
-
-**Expected:** `204 No Content` — room has no sensors assigned, deletion succeeds; sending this request a second time returns `404 Not Found` (idempotent behaviour)
+**Windows version:**
+curl.exe -X DELETE http://localhost:8080/api/v1/rooms/ENG-205
 
 ---
 
-### 6. POST – Register Sensor with a Non-Existent roomId (Validation Fail)
+### 6. POST – Register Sensor with a Non-Existent roomId
+**Standard version:**
+curl -X POST http://localhost:8080/api/v1/sensors -H "Content-Type: application/json" -d "{\"id\": \"TEMP-999\", \"type\": \"Temperature\", \"status\": \"ACTIVE\", \"currentValue\": 20.0, \"roomId\": \"ROOM-DOES-NOT-EXIST\"}"
 
-```bash
-curl -X POST \
-  http://localhost:8080/api/v1/sensors \
-  -H "Content-Type: application/json" \
-  -d '{
-    "id": "TEMP-999",
-    "type": "Temperature",
-    "status": "ACTIVE",
-    "currentValue": 20.0,
-    "roomId": "ROOM-DOES-NOT-EXIST"
-  }'
-```
-
-**Expected:** `422 Unprocessable Entity` — the request body is valid JSON but the `roomId` reference cannot be resolved in the system; `LinkedResourceNotFoundException` is thrown and mapped by `LinkedResourceNotFoundMapper`
+**Windows version:**
+curl.exe -X POST http://localhost:8080/api/v1/sensors -H "Content-Type: application/json" -d "{\"id\": \"TEMP-999\", \"type\": \"Temperature\", \"status\": \"ACTIVE\", \"currentValue\": 20.0, \"roomId\": \"ROOM-DOES-NOT-EXIST\"}"
 
 ---
 
 ### 7. POST – Register Sensor Successfully
+**Standard version:**
+curl -X POST http://localhost:8080/api/v1/sensors -H "Content-Type: application/json" -d "{\"id\": \"TEMP-003\", \"type\": \"Temperature\", \"status\": \"ACTIVE\", \"currentValue\": 21.0, \"roomId\": \"LIB-301\"}"
 
-```bash
-curl -X POST \
-  http://localhost:8080/api/v1/sensors \
-  -H "Content-Type: application/json" \
-  -d '{
-    "id": "TEMP-003",
-    "type": "Temperature",
-    "status": "ACTIVE",
-    "currentValue": 21.0,
-    "roomId": "LIB-301"
-  }'
-```
-
-**Expected:** `201 Created` — sensor is stored in `DataStore`, and `LIB-301`'s `sensorIds` list is updated to include `TEMP-003`; `Location` header points to the new resource
+**Windows version:**
+curl.exe -X POST http://localhost:8080/api/v1/sensors -H "Content-Type: application/json" -d "{\"id\": \"TEMP-003\", \"type\": \"Temperature\", \"status\": \"ACTIVE\", \"currentValue\": 21.0, \"roomId\": \"LIB-301\"}"
 
 ---
 
-### 8. GET – Filter Sensors by Type (Query Parameter)
+### 8. GET – Filter Sensors by Type
+**Standard version:**
+curl -X GET "http://localhost:8080/api/v1/sensors?type=CO2" -H "Accept: application/json"
 
-```bash
-curl -X GET \
-  "http://localhost:8080/api/v1/sensors?type=CO2" \
-  -H "Accept: application/json"
-```
-
-**Expected:** `200 OK` — only sensors whose `type` matches `CO2` (case-insensitive) are returned; all other sensor types are excluded from the response
+**Windows version:**
+curl.exe -X GET "http://localhost:8080/api/v1/sensors?type=CO2" -H "Accept: application/json"
 
 ---
 
 ### 9. POST – Add Reading to a MAINTENANCE Sensor (Blocked)
+**Standard version:**
+curl -X POST http://localhost:8080/api/v1/sensors/OCC-001/readings -H "Content-Type: application/json" -d "{\"value\": 15.0}"
 
-```bash
-curl -X POST \
-  http://localhost:8080/api/v1/sensors/OCC-001/readings \
-  -H "Content-Type: application/json" \
-  -d '{"value": 15.0}'
-```
-
-**Expected:** `403 Forbidden` — `OCC-001` has status `MAINTENANCE`; `SensorUnavailableException` is thrown and mapped to 403, reading is not saved
+**Windows version:**
+curl.exe -X POST http://localhost:8080/api/v1/sensors/OCC-001/readings -H "Content-Type: application/json" -d "{\"value\": 15.0}"
 
 ---
 
 ### 10. POST – Add Reading to an Active Sensor
+**Standard version:**
+curl -X POST http://localhost:8080/api/v1/sensors/TEMP-001/readings -H "Content-Type: application/json" -d "{\"value\": 25.3}"
 
-```bash
-curl -X POST \
-  http://localhost:8080/api/v1/sensors/TEMP-001/readings \
-  -H "Content-Type: application/json" \
-  -d '{"value": 25.3}'
-```
-
-**Expected:** `201 Created` — reading is saved with a UUID `id` and epoch `timestamp` auto-generated by the server; the parent sensor's `currentValue` is immediately updated to `25.3`
+**Windows version:**
+curl.exe -X POST http://localhost:8080/api/v1/sensors/TEMP-001/readings -H "Content-Type: application/json" -d "{\"value\": 25.3}"
 
 ---
 
-### 11. GET – Verify currentValue Was Updated on Parent Sensor
+### 11. GET – Verify currentValue Was Updated
+**Standard version:**
+curl -X GET http://localhost:8080/api/v1/sensors/TEMP-001 -H "Accept: application/json"
 
-```bash
-curl -X GET \
-  http://localhost:8080/api/v1/sensors/TEMP-001 \
-  -H "Accept: application/json"
-```
-
-**Expected:** `200 OK` — the `currentValue` field on `TEMP-001` now shows `25.3`, confirming that the POST reading in step 10 triggered the side-effect update on the parent sensor object
+**Windows version:**
+curl.exe -X GET http://localhost:8080/api/v1/sensors/TEMP-001 -H "Accept: application/json"
 
 ---
 
-### 12. GET – Retrieve Full Reading History for a Sensor
+### 12. GET – Retrieve Full Reading History
+**Standard version:**
+curl -X GET http://localhost:8080/api/v1/sensors/TEMP-001/readings -H "Accept: application/json"
 
-```bash
-curl -X GET \
-  http://localhost:8080/api/v1/sensors/TEMP-001/readings \
-  -H "Accept: application/json"
-```
-
-**Expected:** `200 OK` — JSON array of all historical readings for `TEMP-001`, each containing `id` (UUID), `timestamp` (epoch ms), and `value`; the reading from step 10 appears in this list
-
----
-
+**Windows version:**
+curl.exe -X GET http://localhost:8080/api/v1/sensors/TEMP-001/readings -H "Accept: application/json"
 
 ## Coursework Report – Question Answers
 
