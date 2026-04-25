@@ -34,6 +34,16 @@ public class SensorResource {
             .collect(Collectors.toList());
         return Response.ok(sensors).build();
     }
+    
+    @GET
+    @Path("/{sensorId}")
+    public Response getSensorById(@PathParam("sensorId") String sensorId) {
+        Sensor sensor = store.getSensors().get(sensorId);
+        if (sensor == null) {
+            return Response.status(Response.Status.NOT_FOUND).build();
+        }
+        return Response.ok(sensor).build();
+    }
 
     @POST
     public Response createSensor(Sensor sensor, @Context UriInfo uriInfo) {
