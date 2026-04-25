@@ -1,11 +1,20 @@
-# Smart Campus API
-**Module:** 5COSC022W – Client-Server Architectures | **Weight:** 60%
+# _______  _______  _______  _______ _________     _______  _______  _______  _______           _______        _______  _______ _________
+(  ____ \(       )(  ___  )(  ____ )\__   __/    (  ____ \(  ___  )(       )(  ____ )|\     /|(  ____ \      (  ___  )(  ____ )\__   __/
+| (    \/| () () || (   ) || (    )|   ) (       | (    \/| (   ) || () () || (    )|| )   ( || (    \/      | (   ) || (    )|   ) (   
+| (_____ | || || || (___) || (____)|   | |       | |      | (___) || || || || (____)|| |   | || (_____       | (___) || (____)|   | |   
+(_____  )| |(_)| ||  ___  ||     __)   | |       | |      |  ___  || |(_)| ||  _____)| |   | |(_____  )      |  ___  ||  _____)   | |   
+      ) || |   | || (   ) || (\ (      | |       | |      | (   ) || |   | || (      | |   | |      ) |      | (   ) || (         | |   
+/\____) || )   ( || )   ( || ) \ \__   | |       | (____/\| )   ( || )   ( || )      | (___) |/\____) |      | )   ( || )      ___) (___
+\_______)|/     \||/     \||/   \__/   )_(       (_______/|/     \||/     \||/       (_______)\_______)      |/     \||/       \_______/
+                                                                                                                                        
+**Module:** 5COSC022W – Client-Server Architectures |
+**Developed By:** Mario Ockersz | 20240362
 
 A fully RESTful web service built with **JAX-RS (Jersey 3.1.1)** and an embedded **Grizzly HTTP server**. It manages Rooms, Sensors, and Sensor Readings for a university "Smart Campus" initiative.
 
 **Tech Stack:** Java 17 · JAX-RS (Jersey 3.1.1) · Grizzly HTTP Server · JSON-B · Maven  
 **Storage:** In-memory `ConcurrentHashMap` — no database used  
-**Base URL:** `http://localhost:8080/api/v1`
+**Primary URL:** `http://localhost:8080/api/v1`
 
 ---
 
