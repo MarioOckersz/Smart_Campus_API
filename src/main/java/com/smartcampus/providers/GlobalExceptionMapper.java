@@ -11,7 +11,6 @@ package com.smartcampus.providers;
 
 
 
-
 import jakarta.ws.rs.WebApplicationException;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
@@ -27,19 +26,18 @@ public class GlobalExceptionMapper implements ExceptionMapper<Throwable> {
 
     @Override
     public Response toResponse(Throwable exception) {
-        // If the exception is a WebApplicationException (like 404, 405, 415),
-        // let Jersey's own mapper handle it – don't mess with it.
+        // Let Jersey’s own mappers handle all standard HTTP errors (404, 405, 415, …)
         if (exception instanceof WebApplicationException) {
             return ((WebApplicationException) exception).getResponse();
         }
 
-        // For all truly unexpected exceptions, log the full stack trace securely,
-        // then return a generic 500 with a JSON body and the correct media type.
+        // Log the full stack trace securely on the server only
         LOG.log(Level.SEVERE, "Unhandled internal error", exception);
 
+        // Return a generic 500 with the correct JSON content type
         return Response
                 .status(Response.Status.INTERNAL_SERVER_ERROR)
-                .type(MediaType.APPLICATION_JSON)          // <-- critical fix
+                .type(MediaType.APPLICATION_JSON)          // ← this prevents the writer crash
                 .entity(ResponseHelper.format(500, "An unexpected internal server error occurred."))
                 .build();
     }
