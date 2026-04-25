@@ -231,109 +231,146 @@ classDiagram
 
 ### 1. GET – Discovery Endpoint (HATEOAS)
 **Standard version:**
+```bash
 curl -X GET http://localhost:8080/api/v1 -H "Accept: application/json"
-
-**Windows version:**
+```
+**Windows version (PowerShell):**
+```powershell
 curl.exe -X GET http://localhost:8080/api/v1 -H "Accept: application/json"
+```
 
 ---
 
 ### 2. GET – List All Rooms
 **Standard version:**
+```bash
 curl -X GET http://localhost:8080/api/v1/rooms -H "Accept: application/json"
-
-**Windows version:**
+```
+**Windows version (PowerShell):**
+```powershell
 curl.exe -X GET http://localhost:8080/api/v1/rooms -H "Accept: application/json"
+```
 
 ---
 
 ### 3. POST – Create a New Room
 **Standard version:**
+```bash
 curl -X POST http://localhost:8080/api/v1/rooms -H "Content-Type: application/json" -d "{\"id\": \"ENG-205\", \"name\": \"Engineering Design Studio\", \"capacity\": 40}"
-
-**Windows version:**
+```
+**Windows version (PowerShell):**
+```powershell
 curl.exe -X POST http://localhost:8080/api/v1/rooms -H "Content-Type: application/json" -d "{\"id\": \"ENG-205\", \"name\": \"Engineering Design Studio\", \"capacity\": 40}"
+```
 
 ---
 
 ### 4. DELETE – Room WITH Sensors Assigned (Blocked)
 **Standard version:**
+```bash
 curl -X DELETE http://localhost:8080/api/v1/rooms/LIB-301
-
-**Windows version:**
+```
+**Windows version (PowerShell):**
+```powershell
 curl.exe -X DELETE http://localhost:8080/api/v1/rooms/LIB-301
+```
 
 ---
 
 ### 5. DELETE – Successfully Delete an Empty Room
 **Standard version:**
+```bash
 curl -X DELETE http://localhost:8080/api/v1/rooms/ENG-205
-
-**Windows version:**
+```
+**Windows version (PowerShell):**
+```powershell
 curl.exe -X DELETE http://localhost:8080/api/v1/rooms/ENG-205
+```
 
 ---
 
 ### 6. POST – Register Sensor with a Non-Existent roomId
 **Standard version:**
+```bash
 curl -X POST http://localhost:8080/api/v1/sensors -H "Content-Type: application/json" -d "{\"id\": \"TEMP-999\", \"type\": \"Temperature\", \"status\": \"ACTIVE\", \"currentValue\": 20.0, \"roomId\": \"ROOM-DOES-NOT-EXIST\"}"
-
-**Windows version:**
+```
+**Windows version (PowerShell):**
+```powershell
 curl.exe -X POST http://localhost:8080/api/v1/sensors -H "Content-Type: application/json" -d "{\"id\": \"TEMP-999\", \"type\": \"Temperature\", \"status\": \"ACTIVE\", \"currentValue\": 20.0, \"roomId\": \"ROOM-DOES-NOT-EXIST\"}"
+```
 
 ---
 
 ### 7. POST – Register Sensor Successfully
 **Standard version:**
+```bash
 curl -X POST http://localhost:8080/api/v1/sensors -H "Content-Type: application/json" -d "{\"id\": \"TEMP-003\", \"type\": \"Temperature\", \"status\": \"ACTIVE\", \"currentValue\": 21.0, \"roomId\": \"LIB-301\"}"
-
-**Windows version:**
+```
+**Windows version (PowerShell):**
+```powershell
 curl.exe -X POST http://localhost:8080/api/v1/sensors -H "Content-Type: application/json" -d "{\"id\": \"TEMP-003\", \"type\": \"Temperature\", \"status\": \"ACTIVE\", \"currentValue\": 21.0, \"roomId\": \"LIB-301\"}"
+```
 
 ---
 
 ### 8. GET – Filter Sensors by Type
 **Standard version:**
+```bash
 curl -X GET "http://localhost:8080/api/v1/sensors?type=CO2" -H "Accept: application/json"
-
-**Windows version:**
+```
+**Windows version (PowerShell):**
+```powershell
 curl.exe -X GET "http://localhost:8080/api/v1/sensors?type=CO2" -H "Accept: application/json"
+```
 
 ---
 
 ### 9. POST – Add Reading to a MAINTENANCE Sensor (Blocked)
 **Standard version:**
+```bash
 curl -X POST http://localhost:8080/api/v1/sensors/OCC-001/readings -H "Content-Type: application/json" -d "{\"value\": 15.0}"
-
-**Windows version:**
+```
+**Windows version (PowerShell):**
+```powershell
 curl.exe -X POST http://localhost:8080/api/v1/sensors/OCC-001/readings -H "Content-Type: application/json" -d "{\"value\": 15.0}"
+```
 
 ---
 
 ### 10. POST – Add Reading to an Active Sensor
 **Standard version:**
+```bash
 curl -X POST http://localhost:8080/api/v1/sensors/TEMP-001/readings -H "Content-Type: application/json" -d "{\"value\": 25.3}"
-
-**Windows version:**
+```
+**Windows version (PowerShell):**
+```powershell
 curl.exe -X POST http://localhost:8080/api/v1/sensors/TEMP-001/readings -H "Content-Type: application/json" -d "{\"value\": 25.3}"
+```
 
 ---
 
 ### 11. GET – Verify currentValue Was Updated
 **Standard version:**
+```bash
 curl -X GET http://localhost:8080/api/v1/sensors/TEMP-001 -H "Accept: application/json"
-
-**Windows version:**
+```
+**Windows version (PowerShell):**
+```powershell
 curl.exe -X GET http://localhost:8080/api/v1/sensors/TEMP-001 -H "Accept: application/json"
+```
 
 ---
 
 ### 12. GET – Retrieve Full Reading History
 **Standard version:**
+```bash
 curl -X GET http://localhost:8080/api/v1/sensors/TEMP-001/readings -H "Accept: application/json"
-
-**Windows version:**
+```
+**Windows version (PowerShell):**
+```powershell
 curl.exe -X GET http://localhost:8080/api/v1/sensors/TEMP-001/readings -H "Accept: application/json"
+```
+
 
 ## Coursework Report – Question Answers
 
